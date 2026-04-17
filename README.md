@@ -50,3 +50,7 @@ The pipeline handles:
 
 ## 📄 License
 MIT License
+
+## Feature Engineering
+- Handled missing values
+- Encoded categorical features

@@ -224,44 +224,19 @@ st.markdown(
         background: linear-gradient(180deg, #f5fbf7 0%, #ffffff 100%);
     }
 
-    .result-kicker {
-        font-size: 0.76rem;
-        font-weight: 700;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        margin-bottom: 0.75rem;
-        color: var(--muted);
-    }
-
-    .result-status {
-        font-family: 'Manrope', sans-serif;
-        font-size: 2rem;
-        font-weight: 800;
-        line-height: 1.1;
-        margin-bottom: 0.25rem;
-    }
-
-    .result-status.high {
-        color: var(--danger);
-    }
-
-    .result-status.low {
-        color: var(--success);
-    }
-
     .result-probability {
         font-family: 'Manrope', sans-serif;
-        font-size: 3.6rem;
+        font-size: 4.4rem;
         font-weight: 800;
-        margin: 0.4rem 0;
+        margin: 0.2rem 0 0.5rem;
         color: var(--text);
         line-height: 1;
     }
 
     .result-caption {
         color: var(--muted);
-        font-size: 0.95rem;
-        margin-bottom: 1.1rem;
+        font-size: 1rem;
+        margin-bottom: 1.25rem;
     }
 
     .progress-track {
@@ -286,33 +261,11 @@ st.markdown(
         background: linear-gradient(90deg, #2f9362 0%, #1f7a4f 100%);
     }
 
-    .result-message {
-        font-size: 0.95rem;
-        line-height: 1.7;
-        color: var(--text);
-    }
-
-    .info-panel {
-        background: var(--surface-alt);
-        border: 1px solid var(--border);
-        border-radius: 18px;
-        padding: 1rem 1.1rem;
-        margin-top: 1rem;
-    }
-
-    .info-label {
-        font-size: 0.74rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: var(--muted);
-        margin-bottom: 0.4rem;
-    }
-
-    .info-value {
-        color: var(--text);
-        font-size: 0.95rem;
-        line-height: 1.6;
+    .result-score-shell {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 260px;
     }
 
     .profile-grid {
@@ -724,41 +677,21 @@ with result_col:
         input_df = build_input_frame(customer_values)
         probability = model.predict_proba(input_df)[0][1]
         risk = "high" if probability > 0.5 else "low"
-        status = "Elevated churn risk" if risk == "high" else "Lower churn risk"
-        message = (
-            "This profile shows signs of churn sensitivity. Consider outreach, an incentive, or a service recovery action."
-            if risk == "high"
-            else "This profile appears relatively stable. Maintain service quality and continue standard retention efforts."
-        )
 
         st.markdown(
             f"""
             <div class="section-card">
                 <div class="section-title">Prediction Output</div>
                 <div class="section-subtitle">
-                    The model estimates churn probability from the current profile and suggests an interpretation.
+                    The model estimates churn probability from the current profile.
                 </div>
                 <div class="result-card {risk}">
-                    <div class="result-kicker">Model assessment</div>
-                    <div class="result-status {risk}">{status}</div>
-                    <div class="result-probability">{probability * 100:.1f}%</div>
-                    <div class="result-caption">Estimated probability of churn</div>
-                    <div class="progress-track">
-                        <div class="progress-fill {risk}" style="width: {probability * 100:.1f}%"></div>
-                    </div>
-                    <div class="result-message">{message}</div>
-                </div>
-                <div class="info-panel">
-                    <div class="info-label">Recommended next step</div>
-                    <div class="info-value">
-                        Review recent engagement, complaint history, satisfaction score, and order recency to confirm whether
-                        a retention intervention is needed.
-                    </div>
-                </div>
-                <div class="info-panel">
-                    <div class="info-label">Decision threshold</div>
-                    <div class="info-value">
-                        Profiles above 50.0% are classified as higher churn risk by the current model configuration.
+                    <div class="result-score-shell">
+                        <div class="result-probability">{probability * 100:.1f}%</div>
+                        <div class="result-caption">Churn probability score</div>
+                        <div class="progress-track">
+                            <div class="progress-fill {risk}" style="width: {probability * 100:.1f}%"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -771,13 +704,12 @@ with result_col:
             <div class="section-card">
                 <div class="section-title">Prediction Output</div>
                 <div class="section-subtitle">
-                    The model estimates churn probability from the current profile and suggests an interpretation.
+                    The model estimates churn probability from the current profile.
                 </div>
             <div class="result-card">
-                <div class="result-kicker">Awaiting analysis</div>
-                <div class="result-status">Run the model</div>
-                <div class="result-caption">
-                    Complete or adjust the customer inputs in the sidebar, then run the churn analysis to see the prediction.
+                <div class="result-score-shell">
+                    <div class="result-probability">--</div>
+                    <div class="result-caption">Run the model to view the churn probability score</div>
                 </div>
             </div>
             </div>

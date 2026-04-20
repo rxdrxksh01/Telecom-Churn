@@ -265,7 +265,27 @@ st.markdown(
         display: flex;
         flex-direction: column;
         justify-content: center;
+        align-items: flex-start;
         min-height: 260px;
+    }
+
+    .result-placeholder {
+        width: 88px;
+        height: 88px;
+        border-radius: 22px;
+        background: linear-gradient(180deg, #f4f7fb 0%, #edf2f7 100%);
+        border: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1rem;
+    }
+
+    .result-placeholder-bar {
+        width: 34px;
+        height: 6px;
+        border-radius: 999px;
+        background: #90a0b5;
     }
 
     .profile-grid {
@@ -708,7 +728,9 @@ with result_col:
                 </div>
             <div class="result-card">
                 <div class="result-score-shell">
-                    <div class="result-probability">--</div>
+                    <div class="result-placeholder">
+                        <div class="result-placeholder-bar"></div>
+                    </div>
                     <div class="result-caption">Run the model to view the churn probability score</div>
                 </div>
             </div>

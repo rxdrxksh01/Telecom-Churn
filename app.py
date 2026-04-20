@@ -265,27 +265,31 @@ st.markdown(
         display: flex;
         flex-direction: column;
         justify-content: center;
-        align-items: flex-start;
-        min-height: 260px;
-    }
-
-    .result-placeholder {
-        width: 88px;
-        height: 88px;
-        border-radius: 22px;
-        background: linear-gradient(180deg, #f4f7fb 0%, #edf2f7 100%);
-        border: 1px solid var(--border);
-        display: flex;
         align-items: center;
-        justify-content: center;
-        margin-bottom: 1rem;
+        min-height: 260px;
+        text-align: center;
     }
 
-    .result-placeholder-bar {
-        width: 34px;
-        height: 6px;
-        border-radius: 999px;
-        background: #90a0b5;
+    .result-empty-title {
+        color: var(--text);
+        font-family: 'Manrope', sans-serif;
+        font-size: 1.3rem;
+        font-weight: 800;
+        margin-bottom: 0.45rem;
+    }
+
+    .result-empty-copy {
+        color: var(--muted);
+        font-size: 0.95rem;
+        line-height: 1.7;
+        max-width: 280px;
+    }
+
+    .demo-note {
+        margin: 0.35rem 0 0.9rem;
+        color: var(--muted);
+        font-size: 0.78rem;
+        line-height: 1.5;
     }
 
     .profile-grid {
@@ -437,6 +441,13 @@ st.markdown(
         box-shadow: 0 0 0 4px rgba(24, 59, 99, 0.14) !important;
     }
 
+    [data-testid="column"] [data-testid="stButton"] > button {
+        height: 2.7rem !important;
+        font-size: 0.82rem !important;
+        border-radius: 12px !important;
+        box-shadow: none !important;
+    }
+
     [data-testid="stRadio"] [role="radiogroup"] {
         gap: 0.6rem !important;
     }
@@ -560,6 +571,79 @@ def render_profile_item(label: str, value: str) -> str:
     )
 
 
+DEFAULT_INPUTS = {
+    "tenure": 5,
+    "hour_spend": 3,
+    "order_count": 3,
+    "last_order": 5,
+    "coupons": 1,
+    "cashback": 150.0,
+    "hike": 15,
+    "warehouse_dist": 15,
+    "satisfaction": 3,
+    "devices": 3,
+    "addresses": 3,
+    "city_tier": 1,
+    "complain": "No",
+    "gender": "Male",
+    "marital": "Married",
+    "login_device": "Mobile Phone",
+    "payment": "Debit Card",
+    "order_cat": "Laptop & Accessory",
+}
+
+HIGH_CHURN_DEMO = {
+    "tenure": 1,
+    "hour_spend": 1,
+    "order_count": 1,
+    "last_order": 30,
+    "coupons": 0,
+    "cashback": 20.0,
+    "hike": 5,
+    "warehouse_dist": 35,
+    "satisfaction": 1,
+    "devices": 1,
+    "addresses": 1,
+    "city_tier": 3,
+    "complain": "Yes",
+    "gender": "Female",
+    "marital": "Single",
+    "login_device": "Computer",
+    "payment": "COD",
+    "order_cat": "Others",
+}
+
+LOW_CHURN_DEMO = {
+    "tenure": 18,
+    "hour_spend": 7,
+    "order_count": 12,
+    "last_order": 2,
+    "coupons": 6,
+    "cashback": 220.0,
+    "hike": 24,
+    "warehouse_dist": 8,
+    "satisfaction": 5,
+    "devices": 4,
+    "addresses": 4,
+    "city_tier": 1,
+    "complain": "No",
+    "gender": "Male",
+    "marital": "Married",
+    "login_device": "Mobile Phone",
+    "payment": "Credit Card",
+    "order_cat": "Laptop & Accessory",
+}
+
+
+def apply_demo(values: dict) -> None:
+    for key, value in values.items():
+        st.session_state[key] = value
+
+
+for key, value in DEFAULT_INPUTS.items():
+    st.session_state.setdefault(key, value)
+
+
 model = load_model()
 
 st.markdown(
@@ -587,36 +671,52 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
 
+    demo_col1, demo_col2 = st.columns(2, gap="small")
+    with demo_col1:
+        if st.button("High churn demo", use_container_width=True):
+            apply_demo(HIGH_CHURN_DEMO)
+            st.rerun()
+    with demo_col2:
+        if st.button("Low churn demo", use_container_width=True):
+            apply_demo(LOW_CHURN_DEMO)
+            st.rerun()
+    st.markdown(
+        '<div class="demo-note">Use these presets to quickly preview a high-risk or low-risk customer profile.</div>',
+        unsafe_allow_html=True,
+    )
+
     st.markdown('<div class="sidebar-section">Engagement</div>', unsafe_allow_html=True)
-    tenure = st.number_input("Tenure (months)", min_value=0, max_value=100, value=5)
-    hour_spend = st.slider("Hours on app", 0, 10, 3)
-    order_count = st.number_input("Total orders", min_value=1, max_value=100, value=3)
-    last_order = st.number_input("Days since last order", min_value=0, max_value=100, value=5)
-    coupons = st.number_input("Coupons used", min_value=0, max_value=50, value=1)
+    tenure = st.number_input("Tenure (months)", min_value=0, max_value=100, key="tenure")
+    hour_spend = st.slider("Hours on app", 0, 10, key="hour_spend")
+    order_count = st.number_input("Total orders", min_value=1, max_value=100, key="order_count")
+    last_order = st.number_input("Days since last order", min_value=0, max_value=100, key="last_order")
+    coupons = st.number_input("Coupons used", min_value=0, max_value=50, key="coupons")
 
     st.markdown('<div class="sidebar-section">Value Signals</div>', unsafe_allow_html=True)
-    cashback = st.number_input("Cashback amount", min_value=0.0, max_value=500.0, value=150.0, step=10.0)
-    hike = st.number_input("Order amount hike from last year (%)", min_value=0, max_value=100, value=15)
-    warehouse_dist = st.number_input("Warehouse distance to home (km)", min_value=0, max_value=200, value=15)
+    cashback = st.number_input("Cashback amount", min_value=0.0, max_value=500.0, step=10.0, key="cashback")
+    hike = st.number_input("Order amount hike from last year (%)", min_value=0, max_value=100, key="hike")
+    warehouse_dist = st.number_input("Warehouse distance to home (km)", min_value=0, max_value=200, key="warehouse_dist")
 
     st.markdown('<div class="sidebar-section">Customer Attributes</div>', unsafe_allow_html=True)
-    satisfaction = st.slider("Satisfaction score", 1, 5, 3)
-    devices = st.number_input("Devices registered", min_value=1, max_value=10, value=3)
-    addresses = st.number_input("Saved addresses", min_value=1, max_value=20, value=3)
-    city_tier = st.selectbox("City tier", [1, 2, 3])
-    complain = st.selectbox("Complaint filed", ["No", "Yes"])
+    satisfaction = st.slider("Satisfaction score", 1, 5, key="satisfaction")
+    devices = st.number_input("Devices registered", min_value=1, max_value=10, key="devices")
+    addresses = st.number_input("Saved addresses", min_value=1, max_value=20, key="addresses")
+    city_tier = st.selectbox("City tier", [1, 2, 3], key="city_tier")
+    complain = st.selectbox("Complaint filed", ["No", "Yes"], key="complain")
 
     st.markdown('<div class="sidebar-section">Demographics</div>', unsafe_allow_html=True)
-    gender = st.radio("Gender", ["Male", "Female"], horizontal=True)
-    marital = st.selectbox("Marital status", ["Married", "Single", "Divorced"])
-    login_device = st.selectbox("Preferred device", ["Mobile Phone", "Phone", "Computer"])
+    gender = st.radio("Gender", ["Male", "Female"], horizontal=True, key="gender")
+    marital = st.selectbox("Marital status", ["Married", "Single", "Divorced"], key="marital")
+    login_device = st.selectbox("Preferred device", ["Mobile Phone", "Phone", "Computer"], key="login_device")
     payment = st.selectbox(
         "Preferred payment mode",
         ["Debit Card", "Credit Card", "E wallet", "UPI", "COD", "CC", "Cash on Delivery"],
+        key="payment",
     )
     order_cat = st.selectbox(
         "Preferred order category",
         ["Laptop & Accessory", "Mobile Phone", "Fashion", "Mobile", "Grocery", "Others"],
+        key="order_cat",
     )
 
     st.markdown("<div style='height:0.4rem;'></div>", unsafe_allow_html=True)
@@ -728,10 +828,8 @@ with result_col:
                 </div>
             <div class="result-card">
                 <div class="result-score-shell">
-                    <div class="result-placeholder">
-                        <div class="result-placeholder-bar"></div>
-                    </div>
-                    <div class="result-caption">Run the model to view the churn probability score</div>
+                    <div class="result-empty-title">Score not generated</div>
+                    <div class="result-empty-copy">Use one of the demo buttons or update the customer profile, then run the model to view the churn score.</div>
                 </div>
             </div>
             </div>

@@ -1,6 +1,7 @@
 import joblib
 import pandas as pd
 import streamlit as st
+from html import escape
 
 st.set_page_config(
     page_title="Customer Churn Risk Dashboard",
@@ -133,6 +134,7 @@ st.markdown(
         border-radius: 22px;
         padding: 1.35rem;
         box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+        overflow: hidden;
     }
 
     .section-title {
@@ -297,8 +299,9 @@ st.markdown(
 
     .profile-grid {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 0.8rem;
+        margin-top: 0.25rem;
     }
 
     .profile-item {
@@ -370,12 +373,52 @@ st.markdown(
         border: 1px solid var(--border) !important;
         background: #ffffff !important;
         color: var(--text) !important;
+        min-height: 2.8rem !important;
+    }
+
+    [data-testid="stNumberInput"] div[data-baseweb="input"] {
+        border-radius: 14px !important;
+        border: 1px solid var(--border) !important;
+        overflow: hidden !important;
+        background: #ffffff !important;
+        box-shadow: none !important;
+    }
+
+    [data-testid="stNumberInput"] div[data-baseweb="input"] input {
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    [data-testid="stNumberInput"] div[data-baseweb="input"] button {
+        background: var(--surface-alt) !important;
+        border-left: 1px solid var(--border) !important;
+        border-radius: 0 !important;
+        color: var(--navy) !important;
+        min-width: 2.6rem !important;
+    }
+
+    [data-testid="stNumberInput"] div[data-baseweb="input"] button:hover {
+        background: #e3eaf2 !important;
+    }
+
+    [data-baseweb="base-input"] {
+        border-radius: 14px !important;
+    }
+
+    [data-testid="stSlider"] [data-baseweb="slider"] > div > div {
+        background: #d7dee8 !important;
+    }
+
+    [data-testid="stSlider"] [role="slider"] {
+        background: #183b63 !important;
+        border: 2px solid #ffffff !important;
+        box-shadow: 0 4px 12px rgba(24, 59, 99, 0.25) !important;
     }
 
     [data-testid="stButton"] > button {
         width: 100% !important;
         height: 3.1rem !important;
-        border-radius: 14px !important;
+        border-radius: 999px !important;
         border: none !important;
         background: linear-gradient(135deg, #183b63 0%, #28558a 100%) !important;
         color: #ffffff !important;
@@ -475,12 +518,12 @@ def build_input_frame(values: dict) -> pd.DataFrame:
 
 
 def render_profile_item(label: str, value: str) -> str:
-    return f"""
-    <div class="profile-item">
-        <div class="profile-key">{label}</div>
-        <div class="profile-value">{value}</div>
-    </div>
-    """
+    return (
+        f'<div class="profile-item">'
+        f'<div class="profile-key">{escape(label)}</div>'
+        f'<div class="profile-value">{escape(str(value))}</div>'
+        f"</div>"
+    )
 
 
 model = load_model()
@@ -569,19 +612,24 @@ customer_values = {
 summary_col, result_col = st.columns([1.35, 1], gap="large")
 
 with summary_col:
+    profile_html = "".join(
+        [
+            render_profile_item("Preferred category", order_cat),
+            render_profile_item("Payment mode", payment),
+            render_profile_item("Login device", login_device),
+            render_profile_item("Marital status", marital),
+            render_profile_item("City tier", str(city_tier)),
+            render_profile_item("Complaint status", complain),
+        ]
+    )
+
     st.markdown(
-        """
+        f"""
         <div class="section-card">
             <div class="section-title">Customer Snapshot</div>
             <div class="section-subtitle">
                 A compact view of the most relevant operational inputs before scoring the account.
             </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        f"""
         <div class="metric-grid">
             <div class="metric-card">
                 <div class="metric-label">Tenure</div>
@@ -604,35 +652,13 @@ with summary_col:
                 <div class="metric-note">Recency of engagement</div>
             </div>
         </div>
+        <div class="profile-grid">{profile_html}</div>
+        </div>
         """,
         unsafe_allow_html=True,
     )
-
-    profile_html = "".join(
-        [
-            render_profile_item("Preferred category", order_cat),
-            render_profile_item("Payment mode", payment),
-            render_profile_item("Login device", login_device),
-            render_profile_item("Marital status", marital),
-            render_profile_item("City tier", str(city_tier)),
-            render_profile_item("Complaint status", complain),
-        ]
-    )
-
-    st.markdown(f'<div class="profile-grid">{profile_html}</div></div>', unsafe_allow_html=True)
 
 with result_col:
-    st.markdown(
-        """
-        <div class="section-card">
-            <div class="section-title">Prediction Output</div>
-            <div class="section-subtitle">
-                The model estimates churn probability from the current profile and suggests an interpretation.
-            </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
     if predict_btn:
         input_df = build_input_frame(customer_values)
         probability = model.predict_proba(input_df)[0][1]
@@ -646,33 +672,33 @@ with result_col:
 
         st.markdown(
             f"""
-            <div class="result-card {risk}">
-                <div class="result-kicker">Model assessment</div>
-                <div class="result-status {risk}">{status}</div>
-                <div class="result-probability">{probability * 100:.1f}%</div>
-                <div class="result-caption">Estimated probability of churn</div>
-                <div class="progress-track">
-                    <div class="progress-fill {risk}" style="width: {probability * 100:.1f}%"></div>
+            <div class="section-card">
+                <div class="section-title">Prediction Output</div>
+                <div class="section-subtitle">
+                    The model estimates churn probability from the current profile and suggests an interpretation.
                 </div>
-                <div class="result-message">{message}</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        st.markdown(
-            f"""
-            <div class="info-panel">
-                <div class="info-label">Recommended next step</div>
-                <div class="info-value">
-                    Review recent engagement, complaint history, satisfaction score, and order recency to confirm whether
-                    a retention intervention is needed.
+                <div class="result-card {risk}">
+                    <div class="result-kicker">Model assessment</div>
+                    <div class="result-status {risk}">{status}</div>
+                    <div class="result-probability">{probability * 100:.1f}%</div>
+                    <div class="result-caption">Estimated probability of churn</div>
+                    <div class="progress-track">
+                        <div class="progress-fill {risk}" style="width: {probability * 100:.1f}%"></div>
+                    </div>
+                    <div class="result-message">{message}</div>
                 </div>
-            </div>
-            <div class="info-panel">
-                <div class="info-label">Decision threshold</div>
-                <div class="info-value">
-                    Profiles above 50.0% are classified as higher churn risk by the current model configuration.
+                <div class="info-panel">
+                    <div class="info-label">Recommended next step</div>
+                    <div class="info-value">
+                        Review recent engagement, complaint history, satisfaction score, and order recency to confirm whether
+                        a retention intervention is needed.
+                    </div>
+                </div>
+                <div class="info-panel">
+                    <div class="info-label">Decision threshold</div>
+                    <div class="info-value">
+                        Profiles above 50.0% are classified as higher churn risk by the current model configuration.
+                    </div>
                 </div>
             </div>
             """,
@@ -681,6 +707,11 @@ with result_col:
     else:
         st.markdown(
             """
+            <div class="section-card">
+                <div class="section-title">Prediction Output</div>
+                <div class="section-subtitle">
+                    The model estimates churn probability from the current profile and suggests an interpretation.
+                </div>
             <div class="result-card">
                 <div class="result-kicker">Awaiting analysis</div>
                 <div class="result-status">Run the model</div>
@@ -688,11 +719,10 @@ with result_col:
                     Complete or adjust the customer inputs in the sidebar, then run the churn analysis to see the prediction.
                 </div>
             </div>
+            </div>
             """,
             unsafe_allow_html=True,
         )
-
-    st.markdown("</div>", unsafe_allow_html=True)
 
 with st.expander("Model Details", expanded=False):
     st.write(

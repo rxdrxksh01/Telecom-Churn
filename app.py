@@ -1,479 +1,701 @@
-import streamlit as st
-import pandas as pd
-import numpy as np
 import joblib
-import xgboost as xgb
-from xgboost import XGBClassifier
-import sklearn
-from sklearn.pipeline import Pipeline
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import PowerTransformer, OneHotEncoder
-from sklearn.impute import SimpleImputer
+import pandas as pd
+import streamlit as st
 
 st.set_page_config(
-    page_title="ChurnLens · E-Commerce Intelligence",
-    page_icon="🔮",
+    page_title="Customer Churn Risk Dashboard",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
-st.markdown("""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
+INPUT_COLUMNS = [
+    "Tenure",
+    "CityTier",
+    "WarehouseToHome",
+    "HourSpendOnApp",
+    "NumberOfDeviceRegistered",
+    "SatisfactionScore",
+    "NumberOfAddress",
+    "Complain",
+    "OrderAmountHikeFromlastYear",
+    "CouponUsed",
+    "OrderCount",
+    "DaySinceLastOrder",
+    "CashbackAmount",
+    "PreferredLoginDevice_Mobile Phone",
+    "PreferredLoginDevice_Phone",
+    "PreferredPaymentMode_COD",
+    "PreferredPaymentMode_Cash on Delivery",
+    "PreferredPaymentMode_Credit Card",
+    "PreferredPaymentMode_Debit Card",
+    "PreferredPaymentMode_E wallet",
+    "PreferredPaymentMode_UPI",
+    "Gender_Male",
+    "PreferedOrderCat_Grocery",
+    "PreferedOrderCat_Laptop & Accessory",
+    "PreferedOrderCat_Mobile",
+    "PreferedOrderCat_Mobile Phone",
+    "PreferedOrderCat_Others",
+    "MaritalStatus_Married",
+    "MaritalStatus_Single",
+]
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+st.markdown(
+    """
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
 
-html, body, [data-testid="stAppViewContainer"] {
-    background-color: #0a0a0f !important;
-    font-family: 'DM Sans', sans-serif;
-}
+    :root {
+        --bg: #f3f5f8;
+        --surface: #ffffff;
+        --surface-alt: #eef2f6;
+        --border: #d9e0e8;
+        --text: #132033;
+        --muted: #5f6f82;
+        --navy: #183b63;
+        --navy-soft: #eaf1f8;
+        --success: #1f7a4f;
+        --success-soft: #e8f5ee;
+        --danger: #b54738;
+        --danger-soft: #fdecea;
+        --shadow: 0 16px 40px rgba(17, 24, 39, 0.08);
+    }
 
-[data-testid="stAppViewContainer"] {
-    background: #0a0a0f !important;
-}
+    html, body, [data-testid="stAppViewContainer"] {
+        background: linear-gradient(180deg, #eef3f8 0%, #f8fafc 100%) !important;
+        color: var(--text);
+        font-family: 'IBM Plex Sans', sans-serif;
+    }
 
-[data-testid="stSidebar"] {
-    background: #0f0f18 !important;
-    border-right: 1px solid rgba(255,255,255,0.06) !important;
-}
+    #MainMenu, header, footer {
+        visibility: hidden;
+    }
 
-[data-testid="stSidebar"] > div {
-    padding: 2rem 1.5rem !important;
-}
+    [data-testid="stDecoration"] {
+        display: none;
+    }
 
-/* Hide default streamlit elements */
-#MainMenu, footer, header { visibility: hidden; }
-[data-testid="stDecoration"] { display: none; }
+    [data-testid="stSidebar"] {
+        background: #ffffff !important;
+        border-right: 1px solid var(--border) !important;
+    }
 
-/* Main content padding */
-.main .block-container {
-    padding: 2.5rem 3rem !important;
-    max-width: 1200px !important;
-}
+    [data-testid="stSidebar"] > div {
+        padding: 1.5rem 1.15rem !important;
+    }
 
-/* ── HEADER ── */
-.churn-header {
-    margin-bottom: 2.5rem;
-    padding-bottom: 2rem;
-    border-bottom: 1px solid rgba(255,255,255,0.07);
-}
+    .main .block-container {
+        max-width: 1280px !important;
+        padding: 2rem 2.5rem 2.5rem !important;
+    }
 
-.churn-header h1 {
-    font-family: 'Syne', sans-serif;
-    font-size: 2.6rem;
-    font-weight: 800;
-    color: #ffffff;
-    letter-spacing: -0.03em;
-    line-height: 1.1;
-    margin-bottom: 0.5rem;
-}
+    h1, h2, h3 {
+        font-family: 'Manrope', sans-serif;
+        color: var(--text);
+    }
 
-.churn-header h1 span {
-    background: linear-gradient(135deg, #a78bfa, #60a5fa, #34d399);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
+    .hero-card {
+        background: linear-gradient(135deg, #183b63 0%, #244d7d 100%);
+        border-radius: 24px;
+        padding: 2rem 2.2rem;
+        color: #ffffff;
+        box-shadow: var(--shadow);
+        margin-bottom: 1.5rem;
+    }
 
-.churn-header p {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 1rem;
-    font-weight: 300;
-    color: rgba(255,255,255,0.45);
-    letter-spacing: 0.01em;
-}
+    .hero-eyebrow {
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        opacity: 0.78;
+        margin-bottom: 0.8rem;
+    }
 
-/* ── SIDEBAR LABEL ── */
-.sidebar-section {
-    font-family: 'Syne', sans-serif;
-    font-size: 0.65rem;
-    font-weight: 700;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.25);
-    margin: 1.5rem 0 0.75rem 0;
-    padding-bottom: 0.4rem;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-}
+    .hero-title {
+        font-size: 2.2rem;
+        font-weight: 800;
+        line-height: 1.05;
+        margin-bottom: 0.8rem;
+        font-family: 'Manrope', sans-serif;
+    }
 
-.sidebar-title {
-    font-family: 'Syne', sans-serif;
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #ffffff;
-    margin-bottom: 1.5rem;
-    letter-spacing: -0.01em;
-}
+    .hero-subtitle {
+        max-width: 760px;
+        font-size: 1rem;
+        line-height: 1.7;
+        color: rgba(255, 255, 255, 0.82);
+    }
 
-/* ── INPUT STYLING ── */
-[data-testid="stNumberInput"] label,
-[data-testid="stSlider"] label,
-[data-testid="stSelectbox"] label,
-[data-testid="stRadio"] label {
-    font-family: 'DM Sans', sans-serif !important;
-    font-size: 0.8rem !important;
-    font-weight: 500 !important;
-    color: rgba(255,255,255,0.55) !important;
-    letter-spacing: 0.02em !important;
-    text-transform: uppercase !important;
-}
+    .section-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 22px;
+        padding: 1.35rem;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+    }
 
-[data-testid="stNumberInput"] input,
-[data-testid="stSelectbox"] select {
-    background: rgba(255,255,255,0.04) !important;
-    border: 1px solid rgba(255,255,255,0.1) !important;
-    border-radius: 8px !important;
-    color: #ffffff !important;
-    font-family: 'DM Sans', sans-serif !important;
-    font-size: 0.9rem !important;
-}
+    .section-title {
+        font-family: 'Manrope', sans-serif;
+        font-size: 1.05rem;
+        font-weight: 800;
+        margin-bottom: 0.3rem;
+        color: var(--text);
+    }
 
-[data-testid="stNumberInput"] input:focus,
-[data-testid="stSelectbox"] select:focus {
-    border-color: rgba(167, 139, 250, 0.5) !important;
-    box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.1) !important;
-}
+    .section-subtitle {
+        color: var(--muted);
+        font-size: 0.92rem;
+        margin-bottom: 1rem;
+        line-height: 1.6;
+    }
 
-/* Slider */
-[data-testid="stSlider"] [data-baseweb="slider"] div[role="slider"] {
-    background: #a78bfa !important;
-}
+    .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.9rem;
+        margin-bottom: 1.2rem;
+    }
 
-/* ── PREDICT BUTTON ── */
-[data-testid="stButton"] > button {
-    width: 100% !important;
-    background: linear-gradient(135deg, #a78bfa 0%, #60a5fa 100%) !important;
-    color: #0a0a0f !important;
-    border: none !important;
-    border-radius: 12px !important;
-    height: 3.2rem !important;
-    font-family: 'Syne', sans-serif !important;
-    font-size: 0.9rem !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.05em !important;
-    text-transform: uppercase !important;
-    cursor: pointer !important;
-    transition: all 0.2s ease !important;
-    margin-top: 0.5rem !important;
-}
+    .metric-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 1rem 1.1rem;
+    }
 
-[data-testid="stButton"] > button:hover {
-    transform: translateY(-1px) !important;
-    box-shadow: 0 8px 25px rgba(167, 139, 250, 0.35) !important;
-}
+    .metric-label {
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.72rem;
+        font-weight: 700;
+        margin-bottom: 0.45rem;
+    }
 
-/* ── STAT CARDS ── */
-.stat-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-}
+    .metric-value {
+        color: var(--text);
+        font-family: 'Manrope', sans-serif;
+        font-size: 1.55rem;
+        font-weight: 800;
+        line-height: 1.1;
+    }
 
-.stat-card {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 14px;
-    padding: 1.25rem 1.5rem;
-    transition: border-color 0.2s;
-}
+    .metric-note {
+        color: var(--muted);
+        font-size: 0.84rem;
+        margin-top: 0.35rem;
+    }
 
-.stat-card:hover { border-color: rgba(255,255,255,0.14); }
+    .result-card {
+        border-radius: 24px;
+        padding: 1.6rem;
+        border: 1px solid var(--border);
+        background: var(--surface);
+    }
 
-.stat-label {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.72rem;
-    font-weight: 500;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.35);
-    margin-bottom: 0.5rem;
-}
+    .result-card.high {
+        border-color: rgba(181, 71, 56, 0.24);
+        background: linear-gradient(180deg, #fff7f6 0%, #ffffff 100%);
+    }
 
-.stat-value {
-    font-family: 'Syne', sans-serif;
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: #ffffff;
-    letter-spacing: -0.02em;
-}
+    .result-card.low {
+        border-color: rgba(31, 122, 79, 0.24);
+        background: linear-gradient(180deg, #f5fbf7 0%, #ffffff 100%);
+    }
 
-.stat-unit {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.8rem;
-    color: rgba(255,255,255,0.3);
-    margin-left: 4px;
-}
+    .result-kicker {
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        margin-bottom: 0.75rem;
+        color: var(--muted);
+    }
 
-/* ── RESULT PANEL ── */
-.result-panel {
-    border-radius: 20px;
-    padding: 2.5rem;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-}
+    .result-status {
+        font-family: 'Manrope', sans-serif;
+        font-size: 2rem;
+        font-weight: 800;
+        line-height: 1.1;
+        margin-bottom: 0.25rem;
+    }
 
-.result-panel.high {
-    background: linear-gradient(135deg, rgba(239,68,68,0.12) 0%, rgba(220,38,38,0.06) 100%);
-    border: 1px solid rgba(239,68,68,0.25);
-}
+    .result-status.high {
+        color: var(--danger);
+    }
 
-.result-panel.low {
-    background: linear-gradient(135deg, rgba(52,211,153,0.12) 0%, rgba(16,185,129,0.06) 100%);
-    border: 1px solid rgba(52,211,153,0.25);
-}
+    .result-status.low {
+        color: var(--success);
+    }
 
-.result-badge {
-    display: inline-block;
-    font-family: 'Syne', sans-serif;
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    padding: 0.35rem 1rem;
-    border-radius: 999px;
-    margin-bottom: 1rem;
-}
+    .result-probability {
+        font-family: 'Manrope', sans-serif;
+        font-size: 3.6rem;
+        font-weight: 800;
+        margin: 0.4rem 0;
+        color: var(--text);
+        line-height: 1;
+    }
 
-.result-badge.high {
-    background: rgba(239,68,68,0.15);
-    color: #f87171;
-    border: 1px solid rgba(239,68,68,0.3);
-}
+    .result-caption {
+        color: var(--muted);
+        font-size: 0.95rem;
+        margin-bottom: 1.1rem;
+    }
 
-.result-badge.low {
-    background: rgba(52,211,153,0.15);
-    color: #34d399;
-    border: 1px solid rgba(52,211,153,0.3);
-}
+    .progress-track {
+        width: 100%;
+        height: 10px;
+        background: #e7edf4;
+        border-radius: 999px;
+        overflow: hidden;
+        margin-bottom: 1rem;
+    }
 
-.result-prob {
-    font-family: 'Syne', sans-serif;
-    font-size: 4.5rem;
-    font-weight: 800;
-    letter-spacing: -0.04em;
-    line-height: 1;
-    margin-bottom: 0.4rem;
-}
+    .progress-fill {
+        height: 100%;
+        border-radius: 999px;
+    }
 
-.result-prob.high { color: #f87171; }
-.result-prob.low { color: #34d399; }
+    .progress-fill.high {
+        background: linear-gradient(90deg, #d16457 0%, #b54738 100%);
+    }
 
-.result-sub {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.9rem;
-    color: rgba(255,255,255,0.35);
-    margin-bottom: 1.5rem;
-}
+    .progress-fill.low {
+        background: linear-gradient(90deg, #2f9362 0%, #1f7a4f 100%);
+    }
 
-/* Progress bar */
-.prob-bar-bg {
-    background: rgba(255,255,255,0.07);
-    border-radius: 999px;
-    height: 6px;
-    width: 100%;
-    margin-bottom: 1.5rem;
-    overflow: hidden;
-}
+    .result-message {
+        font-size: 0.95rem;
+        line-height: 1.7;
+        color: var(--text);
+    }
 
-.prob-bar-fill {
-    height: 100%;
-    border-radius: 999px;
-    transition: width 0.8s ease;
-}
+    .info-panel {
+        background: var(--surface-alt);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 1rem 1.1rem;
+        margin-top: 1rem;
+    }
 
-.prob-bar-fill.high { background: linear-gradient(90deg, #ef4444, #f87171); }
-.prob-bar-fill.low  { background: linear-gradient(90deg, #10b981, #34d399); }
+    .info-label {
+        font-size: 0.74rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin-bottom: 0.4rem;
+    }
 
-.result-action {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.88rem;
-    font-weight: 400;
-    color: rgba(255,255,255,0.5);
-    font-style: italic;
-}
+    .info-value {
+        color: var(--text);
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
 
-/* ── IDLE STATE ── */
-.idle-panel {
-    background: rgba(255,255,255,0.02);
-    border: 1px dashed rgba(255,255,255,0.1);
-    border-radius: 20px;
-    padding: 3rem 2rem;
-    text-align: center;
-}
+    .profile-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.8rem;
+    }
 
-.idle-icon {
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
-    opacity: 0.4;
-}
+    .profile-item {
+        background: var(--surface-alt);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 0.95rem 1rem;
+    }
 
-.idle-text {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.95rem;
-    color: rgba(255,255,255,0.2);
-    font-weight: 300;
-}
+    .profile-key {
+        color: var(--muted);
+        font-size: 0.76rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-weight: 700;
+        margin-bottom: 0.3rem;
+    }
 
-/* ── ABOUT EXPANDER ── */
-[data-testid="stExpander"] {
-    background: rgba(255,255,255,0.02) !important;
-    border: 1px solid rgba(255,255,255,0.07) !important;
-    border-radius: 12px !important;
-}
+    .profile-value {
+        color: var(--text);
+        font-size: 1rem;
+        font-weight: 600;
+        line-height: 1.4;
+    }
 
-[data-testid="stExpander"] summary {
-    font-family: 'DM Sans', sans-serif !important;
-    color: rgba(255,255,255,0.5) !important;
-    font-size: 0.85rem !important;
-}
+    .sidebar-head {
+        margin-bottom: 1.2rem;
+    }
 
-[data-testid="stExpander"] p {
-    font-family: 'DM Sans', sans-serif !important;
-    color: rgba(255,255,255,0.4) !important;
-    font-size: 0.85rem !important;
-    font-weight: 300 !important;
-    line-height: 1.7 !important;
-}
+    .sidebar-eyebrow {
+        font-size: 0.72rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+        font-weight: 700;
+        margin-bottom: 0.35rem;
+    }
 
-/* Divider */
-hr {
-    border: none !important;
-    border-top: 1px solid rgba(255,255,255,0.06) !important;
-    margin: 1.5rem 0 !important;
-}
+    .sidebar-title {
+        font-family: 'Manrope', sans-serif;
+        color: var(--text);
+        font-size: 1.25rem;
+        font-weight: 800;
+    }
 
-/* Column gap */
-[data-testid="column"] { gap: 0 !important; }
-</style>
-""", unsafe_allow_html=True)
+    .sidebar-section {
+        margin: 1.25rem 0 0.7rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border);
+        color: var(--text);
+        font-family: 'Manrope', sans-serif;
+        font-size: 0.95rem;
+        font-weight: 800;
+    }
 
-# ── MODEL ──
+    [data-testid="stNumberInput"] label,
+    [data-testid="stSlider"] label,
+    [data-testid="stSelectbox"] label,
+    [data-testid="stRadio"] label {
+        color: var(--text) !important;
+        font-size: 0.86rem !important;
+        font-weight: 600 !important;
+    }
+
+    [data-testid="stNumberInput"] input,
+    [data-testid="stSelectbox"] div[data-baseweb="select"] > div,
+    [data-testid="stTextInput"] input {
+        border-radius: 12px !important;
+        border: 1px solid var(--border) !important;
+        background: #ffffff !important;
+        color: var(--text) !important;
+    }
+
+    [data-testid="stButton"] > button {
+        width: 100% !important;
+        height: 3.1rem !important;
+        border-radius: 14px !important;
+        border: none !important;
+        background: linear-gradient(135deg, #183b63 0%, #28558a 100%) !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        font-size: 0.95rem !important;
+        box-shadow: 0 12px 24px rgba(24, 59, 99, 0.18) !important;
+    }
+
+    [data-testid="stButton"] > button:hover {
+        background: linear-gradient(135deg, #163657 0%, #234c7a 100%) !important;
+    }
+
+    [data-testid="stExpander"] {
+        background: var(--surface) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 18px !important;
+    }
+
+    [data-testid="stExpander"] summary {
+        font-weight: 700 !important;
+        color: var(--text) !important;
+    }
+
+    [data-testid="stMarkdownContainer"] p {
+        line-height: 1.65;
+    }
+
+    @media (max-width: 1100px) {
+        .metric-grid,
+        .profile-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 768px) {
+        .main .block-container {
+            padding: 1.2rem 1rem 2rem !important;
+        }
+
+        .hero-card {
+            padding: 1.4rem;
+        }
+
+        .hero-title {
+            font-size: 1.7rem;
+        }
+
+        .metric-grid,
+        .profile-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+
 @st.cache_resource
 def load_model():
-    return joblib.load('churn_pipeline.pkl')
+    return joblib.load("churn_pipeline.pkl")
+
+
+def build_input_frame(values: dict) -> pd.DataFrame:
+    row = {
+        "Tenure": values["tenure"],
+        "CityTier": values["city_tier"],
+        "WarehouseToHome": values["warehouse_dist"],
+        "HourSpendOnApp": values["hour_spend"],
+        "NumberOfDeviceRegistered": values["devices"],
+        "SatisfactionScore": values["satisfaction"],
+        "NumberOfAddress": values["addresses"],
+        "Complain": 1 if values["complain"] == "Yes" else 0,
+        "OrderAmountHikeFromlastYear": values["hike"],
+        "CouponUsed": values["coupons"],
+        "OrderCount": values["order_count"],
+        "DaySinceLastOrder": values["last_order"],
+        "CashbackAmount": values["cashback"],
+        "PreferredLoginDevice_Mobile Phone": 1 if values["login_device"] == "Mobile Phone" else 0,
+        "PreferredLoginDevice_Phone": 1 if values["login_device"] == "Phone" else 0,
+        "PreferredPaymentMode_COD": 1 if values["payment"] == "COD" else 0,
+        "PreferredPaymentMode_Cash on Delivery": 1 if values["payment"] == "Cash on Delivery" else 0,
+        "PreferredPaymentMode_Credit Card": 1 if values["payment"] == "Credit Card" else 0,
+        "PreferredPaymentMode_Debit Card": 1 if values["payment"] == "Debit Card" else 0,
+        "PreferredPaymentMode_E wallet": 1 if values["payment"] == "E wallet" else 0,
+        "PreferredPaymentMode_UPI": 1 if values["payment"] == "UPI" else 0,
+        "Gender_Male": 1 if values["gender"] == "Male" else 0,
+        "PreferedOrderCat_Grocery": 1 if values["order_cat"] == "Grocery" else 0,
+        "PreferedOrderCat_Laptop & Accessory": 1 if values["order_cat"] == "Laptop & Accessory" else 0,
+        "PreferedOrderCat_Mobile": 1 if values["order_cat"] == "Mobile" else 0,
+        "PreferedOrderCat_Mobile Phone": 1 if values["order_cat"] == "Mobile Phone" else 0,
+        "PreferedOrderCat_Others": 1 if values["order_cat"] == "Others" else 0,
+        "MaritalStatus_Married": 1 if values["marital"] == "Married" else 0,
+        "MaritalStatus_Single": 1 if values["marital"] == "Single" else 0,
+    }
+    return pd.DataFrame([row], columns=INPUT_COLUMNS)
+
+
+def render_profile_item(label: str, value: str) -> str:
+    return f"""
+    <div class="profile-item">
+        <div class="profile-key">{label}</div>
+        <div class="profile-value">{value}</div>
+    </div>
+    """
+
 
 model = load_model()
 
-# ── HEADER ──
-st.markdown("""
-<div class="churn-header">
-    <h1>Churn<span>Lens</span></h1>
-    <p>E-Commerce Customer Intelligence · Real-time churn risk assessment</p>
-</div>
-""", unsafe_allow_html=True)
+st.markdown(
+    """
+    <div class="hero-card">
+        <div class="hero-eyebrow">Predictive Retention Intelligence</div>
+        <div class="hero-title">Customer Churn Risk Dashboard</div>
+        <div class="hero-subtitle">
+            Assess the probability of customer churn using behavioral, transactional, and demographic signals.
+            The interface is designed for fast review and clear decision-making.
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
-# ── SIDEBAR ──
 with st.sidebar:
-    st.markdown('<div class="sidebar-title">🔮 Customer Profile</div>', unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div class="sidebar-head">
+            <div class="sidebar-eyebrow">Input Panel</div>
+            <div class="sidebar-title">Customer Profile</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     st.markdown('<div class="sidebar-section">Engagement</div>', unsafe_allow_html=True)
     tenure = st.number_input("Tenure (months)", min_value=0, max_value=100, value=5)
-    hour_spend = st.slider("Hours on App", 0, 10, 3)
-    order_count = st.number_input("Total Orders", 1, 100, 3)
-    last_order = st.number_input("Days Since Last Order", 0, 100, 5)
-    coupons = st.number_input("Coupons Used", 0, 50, 1)
+    hour_spend = st.slider("Hours on app", 0, 10, 3)
+    order_count = st.number_input("Total orders", min_value=1, max_value=100, value=3)
+    last_order = st.number_input("Days since last order", min_value=0, max_value=100, value=5)
+    coupons = st.number_input("Coupons used", min_value=0, max_value=50, value=1)
 
-    st.markdown('<div class="sidebar-section">Financials</div>', unsafe_allow_html=True)
-    cashback = st.number_input("Cashback Amount (₹)", 0.0, 500.0, 150.0)
-    hike = st.number_input("Order Amount Hike (%)", 0, 100, 15)
-    warehouse_dist = st.number_input("Warehouse Distance (km)", min_value=0, max_value=200, value=15)
+    st.markdown('<div class="sidebar-section">Value Signals</div>', unsafe_allow_html=True)
+    cashback = st.number_input("Cashback amount", min_value=0.0, max_value=500.0, value=150.0, step=10.0)
+    hike = st.number_input("Order amount hike from last year (%)", min_value=0, max_value=100, value=15)
+    warehouse_dist = st.number_input("Warehouse distance to home (km)", min_value=0, max_value=200, value=15)
 
-    st.markdown('<div class="sidebar-section">Profile</div>', unsafe_allow_html=True)
-    satisfaction = st.slider("Satisfaction Score", 1, 5, 3)
-    devices = st.number_input("Devices Registered", 1, 10, 3)
-    addresses = st.number_input("No. of Addresses", 1, 20, 3)
-    city_tier = st.selectbox("City Tier", [1, 2, 3])
-    complain = st.selectbox("Filed Complaint?", ["No", "Yes"])
+    st.markdown('<div class="sidebar-section">Customer Attributes</div>', unsafe_allow_html=True)
+    satisfaction = st.slider("Satisfaction score", 1, 5, 3)
+    devices = st.number_input("Devices registered", min_value=1, max_value=10, value=3)
+    addresses = st.number_input("Saved addresses", min_value=1, max_value=20, value=3)
+    city_tier = st.selectbox("City tier", [1, 2, 3])
+    complain = st.selectbox("Complaint filed", ["No", "Yes"])
 
     st.markdown('<div class="sidebar-section">Demographics</div>', unsafe_allow_html=True)
     gender = st.radio("Gender", ["Male", "Female"], horizontal=True)
-    marital = st.selectbox("Marital Status", ["Married", "Single", "Divorced"])
-    login_device = st.selectbox("Login Device", ["Mobile Phone", "Phone", "Computer"])
-    payment = st.selectbox("Payment Mode", ["Debit Card", "Credit Card", "E wallet", "UPI", "COD", "CC", "Cash on Delivery"])
-    order_cat = st.selectbox("Order Category", ["Laptop & Accessory", "Mobile Phone", "Fashion", "Mobile", "Grocery", "Others"])
+    marital = st.selectbox("Marital status", ["Married", "Single", "Divorced"])
+    login_device = st.selectbox("Preferred login device", ["Mobile Phone", "Phone", "Computer"])
+    payment = st.selectbox(
+        "Preferred payment mode",
+        ["Debit Card", "Credit Card", "E wallet", "UPI", "COD", "CC", "Cash on Delivery"],
+    )
+    order_cat = st.selectbox(
+        "Preferred order category",
+        ["Laptop & Accessory", "Mobile Phone", "Fashion", "Mobile", "Grocery", "Others"],
+    )
 
-    st.markdown("<br>", unsafe_allow_html=True)
-    predict_btn = st.button("⚡ Analyse Risk")
+    st.markdown("<div style='height:0.4rem;'></div>", unsafe_allow_html=True)
+    predict_btn = st.button("Run churn analysis")
 
-# ── MAIN ──
-col1, col2 = st.columns([3, 2], gap="large")
+customer_values = {
+    "tenure": tenure,
+    "city_tier": city_tier,
+    "warehouse_dist": warehouse_dist,
+    "hour_spend": hour_spend,
+    "devices": devices,
+    "satisfaction": satisfaction,
+    "addresses": addresses,
+    "complain": complain,
+    "hike": hike,
+    "coupons": coupons,
+    "order_count": order_count,
+    "last_order": last_order,
+    "cashback": cashback,
+    "login_device": login_device,
+    "payment": payment,
+    "gender": gender,
+    "order_cat": order_cat,
+    "marital": marital,
+}
 
-with col1:
-    # Stat cards
-    st.markdown(f"""
-    <div class="stat-grid">
-        <div class="stat-card">
-            <div class="stat-label">Tenure</div>
-            <div class="stat-value">{tenure}<span class="stat-unit">mo</span></div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">Satisfaction</div>
-            <div class="stat-value">{satisfaction}<span class="stat-unit">/ 5</span></div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">Total Orders</div>
-            <div class="stat-value">{order_count}</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+summary_col, result_col = st.columns([1.35, 1], gap="large")
 
-    # Prediction result
-    if predict_btn:
-        data = {
-            'Tenure': tenure, 'CityTier': city_tier, 'WarehouseToHome': warehouse_dist,
-            'HourSpendOnApp': hour_spend, 'NumberOfDeviceRegistered': devices,
-            'SatisfactionScore': satisfaction, 'NumberOfAddress': addresses,
-            'Complain': 1 if complain == "Yes" else 0,
-            'OrderAmountHikeFromlastYear': hike, 'CouponUsed': coupons,
-            'OrderCount': order_count, 'DaySinceLastOrder': last_order,
-            'CashbackAmount': cashback,
-            'PreferredLoginDevice_Mobile Phone': 1 if login_device == "Mobile Phone" else 0,
-            'PreferredLoginDevice_Phone': 1 if login_device == "Phone" else 0,
-            'PreferredPaymentMode_COD': 1 if payment == "COD" else 0,
-            'PreferredPaymentMode_Cash on Delivery': 1 if payment == "Cash on Delivery" else 0,
-            'PreferredPaymentMode_Credit Card': 1 if payment == "Credit Card" else 0,
-            'PreferredPaymentMode_Debit Card': 1 if payment == "Debit Card" else 0,
-            'PreferredPaymentMode_E wallet': 1 if payment == "E wallet" else 0,
-            'PreferredPaymentMode_UPI': 1 if payment == "UPI" else 0,
-            'Gender_Male': 1 if gender == "Male" else 0,
-            'PreferedOrderCat_Grocery': 1 if order_cat == "Grocery" else 0,
-            'PreferedOrderCat_Laptop & Accessory': 1 if order_cat == "Laptop & Accessory" else 0,
-            'PreferedOrderCat_Mobile': 1 if order_cat == "Mobile" else 0,
-            'PreferedOrderCat_Mobile Phone': 1 if order_cat == "Mobile Phone" else 0,
-            'PreferedOrderCat_Others': 1 if order_cat == "Others" else 0,
-            'MaritalStatus_Married': 1 if marital == "Married" else 0,
-            'MaritalStatus_Single': 1 if marital == "Single" else 0,
-        }
-
-        input_cols = ['Tenure','CityTier','WarehouseToHome','HourSpendOnApp','NumberOfDeviceRegistered','SatisfactionScore','NumberOfAddress','Complain','OrderAmountHikeFromlastYear','CouponUsed','OrderCount','DaySinceLastOrder','CashbackAmount','PreferredLoginDevice_Mobile Phone','PreferredLoginDevice_Phone','PreferredPaymentMode_COD','PreferredPaymentMode_Cash on Delivery','PreferredPaymentMode_Credit Card','PreferredPaymentMode_Debit Card','PreferredPaymentMode_E wallet','PreferredPaymentMode_UPI','Gender_Male','PreferedOrderCat_Grocery','PreferedOrderCat_Laptop & Accessory','PreferedOrderCat_Mobile','PreferedOrderCat_Mobile Phone','PreferedOrderCat_Others','MaritalStatus_Married','MaritalStatus_Single']
-        input_df = pd.DataFrame([data], columns=input_cols)
-
-        prob = model.predict_proba(input_df)[0][1]
-        risk = "high" if prob > 0.5 else "low"
-        risk_label = "High Risk" if risk == "high" else "Low Risk"
-        action = "Consider offering a personalised retention discount or loyalty reward." if risk == "high" else "Consistent experience is working — keep it up."
-
-        st.markdown(f"""
-        <div class="result-panel {risk}">
-            <div class="result-badge {risk}">{risk_label}</div>
-            <div class="result-prob {risk}">{prob*100:.1f}%</div>
-            <div class="result-sub">churn probability</div>
-            <div class="prob-bar-bg">
-                <div class="prob-bar-fill {risk}" style="width: {prob*100}%;"></div>
+with summary_col:
+    st.markdown(
+        """
+        <div class="section-card">
+            <div class="section-title">Customer Snapshot</div>
+            <div class="section-subtitle">
+                A compact view of the most relevant operational inputs before scoring the account.
             </div>
-            <div class="result-action">{action}</div>
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.markdown("""
-        <div class="idle-panel">
-            <div class="idle-icon">🔮</div>
-            <div class="idle-text">Configure the customer profile<br>and click Analyse Risk</div>
-        </div>
-        """, unsafe_allow_html=True)
+        """,
+        unsafe_allow_html=True,
+    )
 
-with col2:
-    with st.expander("About the Model", expanded=False):
-        st.write("XGBoost classifier trained on 5,600+ e-commerce customer interactions. Achieves 96.6% accuracy identifying potential churn using behavioural, transactional, and demographic signals.")
+    st.markdown(
+        f"""
+        <div class="metric-grid">
+            <div class="metric-card">
+                <div class="metric-label">Tenure</div>
+                <div class="metric-value">{tenure} months</div>
+                <div class="metric-note">Relationship duration</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Satisfaction</div>
+                <div class="metric-value">{satisfaction} / 5</div>
+                <div class="metric-note">Experience score</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Order Count</div>
+                <div class="metric-value">{order_count}</div>
+                <div class="metric-note">Historical purchase activity</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Last Order</div>
+                <div class="metric-value">{last_order} days</div>
+                <div class="metric-note">Recency of engagement</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    profile_html = "".join(
+        [
+            render_profile_item("Preferred category", order_cat),
+            render_profile_item("Payment mode", payment),
+            render_profile_item("Login device", login_device),
+            render_profile_item("Marital status", marital),
+            render_profile_item("City tier", str(city_tier)),
+            render_profile_item("Complaint status", complain),
+        ]
+    )
+
+    st.markdown(f'<div class="profile-grid">{profile_html}</div></div>', unsafe_allow_html=True)
+
+with result_col:
+    st.markdown(
+        """
+        <div class="section-card">
+            <div class="section-title">Prediction Output</div>
+            <div class="section-subtitle">
+                The model estimates churn probability from the current profile and suggests an interpretation.
+            </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    if predict_btn:
+        input_df = build_input_frame(customer_values)
+        probability = model.predict_proba(input_df)[0][1]
+        risk = "high" if probability > 0.5 else "low"
+        status = "Elevated churn risk" if risk == "high" else "Lower churn risk"
+        message = (
+            "This profile shows signs of churn sensitivity. Consider outreach, an incentive, or a service recovery action."
+            if risk == "high"
+            else "This profile appears relatively stable. Maintain service quality and continue standard retention efforts."
+        )
+
+        st.markdown(
+            f"""
+            <div class="result-card {risk}">
+                <div class="result-kicker">Model assessment</div>
+                <div class="result-status {risk}">{status}</div>
+                <div class="result-probability">{probability * 100:.1f}%</div>
+                <div class="result-caption">Estimated probability of churn</div>
+                <div class="progress-track">
+                    <div class="progress-fill {risk}" style="width: {probability * 100:.1f}%"></div>
+                </div>
+                <div class="result-message">{message}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        st.markdown(
+            f"""
+            <div class="info-panel">
+                <div class="info-label">Recommended next step</div>
+                <div class="info-value">
+                    Review recent engagement, complaint history, satisfaction score, and order recency to confirm whether
+                    a retention intervention is needed.
+                </div>
+            </div>
+            <div class="info-panel">
+                <div class="info-label">Decision threshold</div>
+                <div class="info-value">
+                    Profiles above 50.0% are classified as higher churn risk by the current model configuration.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            """
+            <div class="result-card">
+                <div class="result-kicker">Awaiting analysis</div>
+                <div class="result-status">Run the model</div>
+                <div class="result-caption">
+                    Complete or adjust the customer inputs in the sidebar, then run the churn analysis to see the prediction.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+with st.expander("Model Details", expanded=False):
+    st.write(
+        "The application uses a trained XGBoost pipeline built on e-commerce customer behavior, transactional activity, "
+        "and profile attributes. The score should be used as a decision-support signal alongside business context."
+    )

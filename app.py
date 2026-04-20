@@ -10,164 +10,470 @@ from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import PowerTransformer, OneHotEncoder
 from sklearn.impute import SimpleImputer
 
-# Set page config
 st.set_page_config(
-    page_title="E-Commerce Churn Predictor",
-    page_icon="🛒",
-    layout="wide"
+    page_title="ChurnLens · E-Commerce Intelligence",
+    page_icon="🔮",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-# Custom CSS for premium look
 st.markdown("""
-    <style>
-    .main {
-        background-color: #f8f9fa;
-    }
-    .stButton>button {
-        width: 100%;
-        border-radius: 5px;
-        height: 3em;
-        background-color: #007bff;
-        color: white;
-    }
-    .result-card {
-        padding: 2rem;
-        border-radius: 10px;
-        background-color: white;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        text-align: center;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
 
-# Load model
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, [data-testid="stAppViewContainer"] {
+    background-color: #0a0a0f !important;
+    font-family: 'DM Sans', sans-serif;
+}
+
+[data-testid="stAppViewContainer"] {
+    background: #0a0a0f !important;
+}
+
+[data-testid="stSidebar"] {
+    background: #0f0f18 !important;
+    border-right: 1px solid rgba(255,255,255,0.06) !important;
+}
+
+[data-testid="stSidebar"] > div {
+    padding: 2rem 1.5rem !important;
+}
+
+/* Hide default streamlit elements */
+#MainMenu, footer, header { visibility: hidden; }
+[data-testid="stDecoration"] { display: none; }
+
+/* Main content padding */
+.main .block-container {
+    padding: 2.5rem 3rem !important;
+    max-width: 1200px !important;
+}
+
+/* ── HEADER ── */
+.churn-header {
+    margin-bottom: 2.5rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+
+.churn-header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 2.6rem;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    margin-bottom: 0.5rem;
+}
+
+.churn-header h1 span {
+    background: linear-gradient(135deg, #a78bfa, #60a5fa, #34d399);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.churn-header p {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1rem;
+    font-weight: 300;
+    color: rgba(255,255,255,0.45);
+    letter-spacing: 0.01em;
+}
+
+/* ── SIDEBAR LABEL ── */
+.sidebar-section {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.25);
+    margin: 1.5rem 0 0.75rem 0;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.sidebar-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 1.5rem;
+    letter-spacing: -0.01em;
+}
+
+/* ── INPUT STYLING ── */
+[data-testid="stNumberInput"] label,
+[data-testid="stSlider"] label,
+[data-testid="stSelectbox"] label,
+[data-testid="stRadio"] label {
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 0.8rem !important;
+    font-weight: 500 !important;
+    color: rgba(255,255,255,0.55) !important;
+    letter-spacing: 0.02em !important;
+    text-transform: uppercase !important;
+}
+
+[data-testid="stNumberInput"] input,
+[data-testid="stSelectbox"] select {
+    background: rgba(255,255,255,0.04) !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    border-radius: 8px !important;
+    color: #ffffff !important;
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 0.9rem !important;
+}
+
+[data-testid="stNumberInput"] input:focus,
+[data-testid="stSelectbox"] select:focus {
+    border-color: rgba(167, 139, 250, 0.5) !important;
+    box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.1) !important;
+}
+
+/* Slider */
+[data-testid="stSlider"] [data-baseweb="slider"] div[role="slider"] {
+    background: #a78bfa !important;
+}
+
+/* ── PREDICT BUTTON ── */
+[data-testid="stButton"] > button {
+    width: 100% !important;
+    background: linear-gradient(135deg, #a78bfa 0%, #60a5fa 100%) !important;
+    color: #0a0a0f !important;
+    border: none !important;
+    border-radius: 12px !important;
+    height: 3.2rem !important;
+    font-family: 'Syne', sans-serif !important;
+    font-size: 0.9rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.05em !important;
+    text-transform: uppercase !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    margin-top: 0.5rem !important;
+}
+
+[data-testid="stButton"] > button:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 8px 25px rgba(167, 139, 250, 0.35) !important;
+}
+
+/* ── STAT CARDS ── */
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 14px;
+    padding: 1.25rem 1.5rem;
+    transition: border-color 0.2s;
+}
+
+.stat-card:hover { border-color: rgba(255,255,255,0.14); }
+
+.stat-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.35);
+    margin-bottom: 0.5rem;
+}
+
+.stat-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: -0.02em;
+}
+
+.stat-unit {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.3);
+    margin-left: 4px;
+}
+
+/* ── RESULT PANEL ── */
+.result-panel {
+    border-radius: 20px;
+    padding: 2.5rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.result-panel.high {
+    background: linear-gradient(135deg, rgba(239,68,68,0.12) 0%, rgba(220,38,38,0.06) 100%);
+    border: 1px solid rgba(239,68,68,0.25);
+}
+
+.result-panel.low {
+    background: linear-gradient(135deg, rgba(52,211,153,0.12) 0%, rgba(16,185,129,0.06) 100%);
+    border: 1px solid rgba(52,211,153,0.25);
+}
+
+.result-badge {
+    display: inline-block;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 0.35rem 1rem;
+    border-radius: 999px;
+    margin-bottom: 1rem;
+}
+
+.result-badge.high {
+    background: rgba(239,68,68,0.15);
+    color: #f87171;
+    border: 1px solid rgba(239,68,68,0.3);
+}
+
+.result-badge.low {
+    background: rgba(52,211,153,0.15);
+    color: #34d399;
+    border: 1px solid rgba(52,211,153,0.3);
+}
+
+.result-prob {
+    font-family: 'Syne', sans-serif;
+    font-size: 4.5rem;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    margin-bottom: 0.4rem;
+}
+
+.result-prob.high { color: #f87171; }
+.result-prob.low { color: #34d399; }
+
+.result-sub {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    color: rgba(255,255,255,0.35);
+    margin-bottom: 1.5rem;
+}
+
+/* Progress bar */
+.prob-bar-bg {
+    background: rgba(255,255,255,0.07);
+    border-radius: 999px;
+    height: 6px;
+    width: 100%;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.prob-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.8s ease;
+}
+
+.prob-bar-fill.high { background: linear-gradient(90deg, #ef4444, #f87171); }
+.prob-bar-fill.low  { background: linear-gradient(90deg, #10b981, #34d399); }
+
+.result-action {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 400;
+    color: rgba(255,255,255,0.5);
+    font-style: italic;
+}
+
+/* ── IDLE STATE ── */
+.idle-panel {
+    background: rgba(255,255,255,0.02);
+    border: 1px dashed rgba(255,255,255,0.1);
+    border-radius: 20px;
+    padding: 3rem 2rem;
+    text-align: center;
+}
+
+.idle-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    opacity: 0.4;
+}
+
+.idle-text {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    color: rgba(255,255,255,0.2);
+    font-weight: 300;
+}
+
+/* ── ABOUT EXPANDER ── */
+[data-testid="stExpander"] {
+    background: rgba(255,255,255,0.02) !important;
+    border: 1px solid rgba(255,255,255,0.07) !important;
+    border-radius: 12px !important;
+}
+
+[data-testid="stExpander"] summary {
+    font-family: 'DM Sans', sans-serif !important;
+    color: rgba(255,255,255,0.5) !important;
+    font-size: 0.85rem !important;
+}
+
+[data-testid="stExpander"] p {
+    font-family: 'DM Sans', sans-serif !important;
+    color: rgba(255,255,255,0.4) !important;
+    font-size: 0.85rem !important;
+    font-weight: 300 !important;
+    line-height: 1.7 !important;
+}
+
+/* Divider */
+hr {
+    border: none !important;
+    border-top: 1px solid rgba(255,255,255,0.06) !important;
+    margin: 1.5rem 0 !important;
+}
+
+/* Column gap */
+[data-testid="column"] { gap: 0 !important; }
+</style>
+""", unsafe_allow_html=True)
+
+# ── MODEL ──
 @st.cache_resource
 def load_model():
     return joblib.load('churn_pipeline.pkl')
 
 model = load_model()
 
-# Header
-st.title("🛒 E-Commerce Customer Churn Analysis")
-st.markdown("Predict the likelihood of a customer leaving based on their behavior and transaction history.")
+# ── HEADER ──
+st.markdown("""
+<div class="churn-header">
+    <h1>Churn<span>Lens</span></h1>
+    <p>E-Commerce Customer Intelligence · Real-time churn risk assessment</p>
+</div>
+""", unsafe_allow_html=True)
 
-# Sidebar for inputs
-st.sidebar.header("Customer Profile")
-
+# ── SIDEBAR ──
 with st.sidebar:
-    # Numeric Inputs
-    tenure = st.number_input("Tenure (Months)", min_value=0, max_value=100, value=5)
-    warehouse_dist = st.number_input("Distance from Warehouse", min_value=0, max_value=200, value=15)
-    hour_spend = st.slider("Hours Spent on App", 0, 10, 3)
-    devices = st.number_input("Number of Devices", 1, 10, 3)
-    satisfaction = st.slider("Satisfaction Score (1-5)", 1, 5, 3)
-    addresses = st.number_input("Number of Addresses", 1, 20, 3)
-    hike = st.number_input("Order Amount Hike (%)", 0, 100, 15)
-    coupons = st.number_input("Coupons Used", 0, 50, 1)
+    st.markdown('<div class="sidebar-title">🔮 Customer Profile</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="sidebar-section">Engagement</div>', unsafe_allow_html=True)
+    tenure = st.number_input("Tenure (months)", min_value=0, max_value=100, value=5)
+    hour_spend = st.slider("Hours on App", 0, 10, 3)
     order_count = st.number_input("Total Orders", 1, 100, 3)
     last_order = st.number_input("Days Since Last Order", 0, 100, 5)
-    cashback = st.number_input("Cashback Amount", 0.0, 500.0, 150.0)
-    
-    # Binary/Categorical mapping
-    complain = st.selectbox("Lodged Complaint?", ["No", "Yes"])
-    city_tier = st.selectbox("City Tier", [1, 2, 3])
-    
-    # Selection Inputs
-    st.sidebar.markdown("---")
-    st.sidebar.header("Demographics & Preferences")
-    gender = st.radio("Gender", ["Male", "Female"])
-    marital = st.selectbox("Marital Status", ["Married", "Single", "Divorced"])
-    login_device = st.selectbox("Preferred Login Device", ["Mobile Phone", "Phone", "Computer"])
-    payment = st.selectbox("Preferred Payment Mode", ["Debit Card", "Credit Card", "E wallet", "UPI", "COD", "CC", "Cash on Delivery"])
-    order_cat = st.selectbox("Preferred Order Category", ["Laptop & Accessory", "Mobile Phone", "Fashion", "Mobile", "Grocery", "Others"])
+    coupons = st.number_input("Coupons Used", 0, 50, 1)
 
-# Main area for prediction
-col1, col2 = st.columns([2, 1])
+    st.markdown('<div class="sidebar-section">Financials</div>', unsafe_allow_html=True)
+    cashback = st.number_input("Cashback Amount (₹)", 0.0, 500.0, 150.0)
+    hike = st.number_input("Order Amount Hike (%)", 0, 100, 15)
+    warehouse_dist = st.number_input("Warehouse Distance (km)", min_value=0, max_value=200, value=15)
+
+    st.markdown('<div class="sidebar-section">Profile</div>', unsafe_allow_html=True)
+    satisfaction = st.slider("Satisfaction Score", 1, 5, 3)
+    devices = st.number_input("Devices Registered", 1, 10, 3)
+    addresses = st.number_input("No. of Addresses", 1, 20, 3)
+    city_tier = st.selectbox("City Tier", [1, 2, 3])
+    complain = st.selectbox("Filed Complaint?", ["No", "Yes"])
+
+    st.markdown('<div class="sidebar-section">Demographics</div>', unsafe_allow_html=True)
+    gender = st.radio("Gender", ["Male", "Female"], horizontal=True)
+    marital = st.selectbox("Marital Status", ["Married", "Single", "Divorced"])
+    login_device = st.selectbox("Login Device", ["Mobile Phone", "Phone", "Computer"])
+    payment = st.selectbox("Payment Mode", ["Debit Card", "Credit Card", "E wallet", "UPI", "COD", "CC", "Cash on Delivery"])
+    order_cat = st.selectbox("Order Category", ["Laptop & Accessory", "Mobile Phone", "Fashion", "Mobile", "Grocery", "Others"])
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    predict_btn = st.button("⚡ Analyse Risk")
+
+# ── MAIN ──
+col1, col2 = st.columns([3, 2], gap="large")
 
 with col1:
-    st.subheader("Model Prediction")
-    
-    if st.button("Analyze Churn Risk"):
-        # Prepare input data
-        # We need to map raw inputs to the specific dummy columns the model was trained on
-        
-        # Numeric base
+    # Stat cards
+    st.markdown(f"""
+    <div class="stat-grid">
+        <div class="stat-card">
+            <div class="stat-label">Tenure</div>
+            <div class="stat-value">{tenure}<span class="stat-unit">mo</span></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Satisfaction</div>
+            <div class="stat-value">{satisfaction}<span class="stat-unit">/ 5</span></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Total Orders</div>
+            <div class="stat-value">{order_count}</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Prediction result
+    if predict_btn:
         data = {
-            'Tenure': tenure,
-            'CityTier': city_tier,
-            'WarehouseToHome': warehouse_dist,
-            'HourSpendOnApp': hour_spend,
-            'NumberOfDeviceRegistered': devices,
-            'SatisfactionScore': satisfaction,
-            'NumberOfAddress': addresses,
+            'Tenure': tenure, 'CityTier': city_tier, 'WarehouseToHome': warehouse_dist,
+            'HourSpendOnApp': hour_spend, 'NumberOfDeviceRegistered': devices,
+            'SatisfactionScore': satisfaction, 'NumberOfAddress': addresses,
             'Complain': 1 if complain == "Yes" else 0,
-            'OrderAmountHikeFromlastYear': hike,
-            'CouponUsed': coupons,
-            'OrderCount': order_count,
-            'DaySinceLastOrder': last_order,
-            'CashbackAmount': cashback
+            'OrderAmountHikeFromlastYear': hike, 'CouponUsed': coupons,
+            'OrderCount': order_count, 'DaySinceLastOrder': last_order,
+            'CashbackAmount': cashback,
+            'PreferredLoginDevice_Mobile Phone': 1 if login_device == "Mobile Phone" else 0,
+            'PreferredLoginDevice_Phone': 1 if login_device == "Phone" else 0,
+            'PreferredPaymentMode_COD': 1 if payment == "COD" else 0,
+            'PreferredPaymentMode_Cash on Delivery': 1 if payment == "Cash on Delivery" else 0,
+            'PreferredPaymentMode_Credit Card': 1 if payment == "Credit Card" else 0,
+            'PreferredPaymentMode_Debit Card': 1 if payment == "Debit Card" else 0,
+            'PreferredPaymentMode_E wallet': 1 if payment == "E wallet" else 0,
+            'PreferredPaymentMode_UPI': 1 if payment == "UPI" else 0,
+            'Gender_Male': 1 if gender == "Male" else 0,
+            'PreferedOrderCat_Grocery': 1 if order_cat == "Grocery" else 0,
+            'PreferedOrderCat_Laptop & Accessory': 1 if order_cat == "Laptop & Accessory" else 0,
+            'PreferedOrderCat_Mobile': 1 if order_cat == "Mobile" else 0,
+            'PreferedOrderCat_Mobile Phone': 1 if order_cat == "Mobile Phone" else 0,
+            'PreferedOrderCat_Others': 1 if order_cat == "Others" else 0,
+            'MaritalStatus_Married': 1 if marital == "Married" else 0,
+            'MaritalStatus_Single': 1 if marital == "Single" else 0,
         }
-        
-        # Categorical dummies (Manual mapping based on model inspection)
-        # Note: Computer, CC, Female, etc. were likely the reference categories (dropped)
-        
-        # login_device
-        data['PreferredLoginDevice_Mobile Phone'] = 1 if login_device == "Mobile Phone" else 0
-        data['PreferredLoginDevice_Phone'] = 1 if login_device == "Phone" else 0
-        
-        # payment
-        data['PreferredPaymentMode_COD'] = 1 if payment == "COD" else 0
-        data['PreferredPaymentMode_Cash on Delivery'] = 1 if payment == "Cash on Delivery" else 0
-        data['PreferredPaymentMode_Credit Card'] = 1 if payment == "Credit Card" else 0
-        data['PreferredPaymentMode_Debit Card'] = 1 if payment == "Debit Card" else 0
-        data['PreferredPaymentMode_E wallet'] = 1 if payment == "E wallet" else 0
-        data['PreferredPaymentMode_UPI'] = 1 if payment == "UPI" else 0
-        
-        # gender
-        data['Gender_Male'] = 1 if gender == "Male" else 0
-        
-        # order_cat
-        data['PreferedOrderCat_Grocery'] = 1 if order_cat == "Grocery" else 0
-        data['PreferedOrderCat_Laptop & Accessory'] = 1 if order_cat == "Laptop & Accessory" else 0
-        data['PreferedOrderCat_Mobile'] = 1 if order_cat == "Mobile" else 0
-        data['PreferedOrderCat_Mobile Phone'] = 1 if order_cat == "Mobile Phone" else 0
-        data['PreferedOrderCat_Others'] = 1 if order_cat == "Others" else 0
-        
-        # marital
-        data['MaritalStatus_Married'] = 1 if marital == "Married" else 0
-        data['MaritalStatus_Single'] = 1 if marital == "Single" else 0
-        
-        # Convert to DataFrame with EXACT columns as training
-        input_cols = ['Tenure', 'CityTier', 'WarehouseToHome', 'HourSpendOnApp', 'NumberOfDeviceRegistered', 'SatisfactionScore', 'NumberOfAddress', 'Complain', 'OrderAmountHikeFromlastYear', 'CouponUsed', 'OrderCount', 'DaySinceLastOrder', 'CashbackAmount', 'PreferredLoginDevice_Mobile Phone', 'PreferredLoginDevice_Phone', 'PreferredPaymentMode_COD', 'PreferredPaymentMode_Cash on Delivery', 'PreferredPaymentMode_Credit Card', 'PreferredPaymentMode_Debit Card', 'PreferredPaymentMode_E wallet', 'PreferredPaymentMode_UPI', 'Gender_Male', 'PreferedOrderCat_Grocery', 'PreferedOrderCat_Laptop & Accessory', 'PreferedOrderCat_Mobile', 'PreferedOrderCat_Mobile Phone', 'PreferedOrderCat_Others', 'MaritalStatus_Married', 'MaritalStatus_Single']
-        
+
+        input_cols = ['Tenure','CityTier','WarehouseToHome','HourSpendOnApp','NumberOfDeviceRegistered','SatisfactionScore','NumberOfAddress','Complain','OrderAmountHikeFromlastYear','CouponUsed','OrderCount','DaySinceLastOrder','CashbackAmount','PreferredLoginDevice_Mobile Phone','PreferredLoginDevice_Phone','PreferredPaymentMode_COD','PreferredPaymentMode_Cash on Delivery','PreferredPaymentMode_Credit Card','PreferredPaymentMode_Debit Card','PreferredPaymentMode_E wallet','PreferredPaymentMode_UPI','Gender_Male','PreferedOrderCat_Grocery','PreferedOrderCat_Laptop & Accessory','PreferedOrderCat_Mobile','PreferedOrderCat_Mobile Phone','PreferedOrderCat_Others','MaritalStatus_Married','MaritalStatus_Single']
         input_df = pd.DataFrame([data], columns=input_cols)
-        
-        # Prediction
+
         prob = model.predict_proba(input_df)[0][1]
-        risk_level = "High" if prob > 0.5 else "Low"
-        color = "#dc3545" if risk_level == "High" else "#28a745"
-        
+        risk = "high" if prob > 0.5 else "low"
+        risk_label = "High Risk" if risk == "high" else "Low Risk"
+        action = "Consider offering a personalised retention discount or loyalty reward." if risk == "high" else "Consistent experience is working — keep it up."
+
         st.markdown(f"""
-            <div class="result-card">
-                <h2 style="color: {color};">{risk_level} Churn Risk</h2>
-                <p>Churn Probability: <b>{prob*100:.2f}%</b></p>
-                <div style="background-color: #e9ecef; border-radius: 10px; height: 1.5rem; width: 100%;">
-                    <div style="background-color: {color}; height: 100%; width: {prob*100}%; border-radius: 10px;"></div>
-                </div>
+        <div class="result-panel {risk}">
+            <div class="result-badge {risk}">{risk_label}</div>
+            <div class="result-prob {risk}">{prob*100:.1f}%</div>
+            <div class="result-sub">churn probability</div>
+            <div class="prob-bar-bg">
+                <div class="prob-bar-fill {risk}" style="width: {prob*100}%;"></div>
             </div>
+            <div class="result-action">{action}</div>
+        </div>
         """, unsafe_allow_html=True)
-        
-        if risk_level == "High":
-            st.warning("⚠️ Action Recommended: Consider offering a targeted discount or personalized reaches.")
-        else:
-            st.success("✅ Loyal Customer: Continue providing consistent service quality.")
+    else:
+        st.markdown("""
+        <div class="idle-panel">
+            <div class="idle-icon">🔮</div>
+            <div class="idle-text">Configure the customer profile<br>and click Analyse Risk</div>
+        </div>
+        """, unsafe_allow_html=True)
 
 with col2:
-    st.subheader("Key Statistics")
-    st.info(f"Avg Tenure: {tenure} months")
-    st.info(f"Satisfaction: {satisfaction}/5")
-    st.info(f"Total Orders: {order_count}")
-
-# Feature importance or details
-with st.expander("About the Model"):
-    st.write("This model uses an XGBoost Classifier trained on a dataset of 5,600+ e-commerce customer interactions. It achieves 96.6% accuracy in identifying potential churn.")
+    with st.expander("About the Model", expanded=False):
+        st.write("XGBoost classifier trained on 5,600+ e-commerce customer interactions. Achieves 96.6% accuracy identifying potential churn using behavioural, transactional, and demographic signals.")

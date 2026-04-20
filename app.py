@@ -473,10 +473,23 @@ st.markdown(
         border: 1px solid var(--border) !important;
         border-radius: 14px !important;
         padding: 0.55rem 0.85rem !important;
+        min-width: 88px !important;
     }
 
     [data-testid="stRadio"] label[data-baseweb="radio"] > div:last-child {
-        font-weight: 600 !important;
+        font-weight: 700 !important;
+        color: var(--text) !important;
+        opacity: 1 !important;
+    }
+
+    [data-testid="stRadio"] label[data-baseweb="radio"] svg {
+        color: var(--navy) !important;
+        fill: var(--navy) !important;
+    }
+
+    [data-testid="stRadio"] label[data-baseweb="radio"][aria-checked="true"] {
+        background: var(--navy-soft) !important;
+        border-color: #9fb4cc !important;
     }
 
     [data-testid="stExpander"] {
@@ -623,7 +636,7 @@ with st.sidebar:
     st.markdown('<div class="sidebar-section">Demographics</div>', unsafe_allow_html=True)
     gender = st.radio("Gender", ["Male", "Female"], horizontal=True)
     marital = st.selectbox("Marital status", ["Married", "Single", "Divorced"])
-    login_device = st.selectbox("Preferred login device", ["Mobile Phone", "Phone", "Computer"])
+    login_device = st.selectbox("Preferred device", ["Mobile Phone", "Phone", "Computer"])
     payment = st.selectbox(
         "Preferred payment mode",
         ["Debit Card", "Credit Card", "E wallet", "UPI", "COD", "CC", "Cash on Delivery"],
@@ -664,7 +677,7 @@ with summary_col:
         [
             render_profile_item("Preferred category", order_cat),
             render_profile_item("Payment mode", payment),
-            render_profile_item("Login device", login_device),
+            render_profile_item("Device", login_device),
             render_profile_item("Marital status", marital),
             render_profile_item("City tier", str(city_tier)),
             render_profile_item("Complaint status", complain),

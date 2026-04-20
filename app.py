@@ -154,16 +154,20 @@ st.markdown(
 
     .metric-grid {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 0.9rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
         margin-bottom: 1.2rem;
     }
 
     .metric-card {
         background: var(--surface);
         border: 1px solid var(--border);
-        border-radius: 18px;
-        padding: 1rem 1.1rem;
+        border-radius: 20px;
+        padding: 1.15rem 1.2rem;
+        min-height: 148px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
     }
 
     .metric-label {
@@ -178,15 +182,29 @@ st.markdown(
     .metric-value {
         color: var(--text);
         font-family: 'Manrope', sans-serif;
-        font-size: 1.55rem;
+        font-size: 2.1rem;
         font-weight: 800;
-        line-height: 1.1;
+        line-height: 1;
+        letter-spacing: -0.03em;
+        white-space: nowrap;
+        display: flex;
+        align-items: baseline;
+        gap: 0.35rem;
+        margin-bottom: 0.35rem;
+    }
+
+    .metric-unit {
+        color: var(--muted);
+        font-size: 0.95rem;
+        font-weight: 700;
+        letter-spacing: 0;
     }
 
     .metric-note {
         color: var(--muted);
         font-size: 0.84rem;
         margin-top: 0.35rem;
+        max-width: 16ch;
     }
 
     .result-card {
@@ -299,16 +317,17 @@ st.markdown(
 
     .profile-grid {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 0.8rem;
-        margin-top: 0.25rem;
+        margin-top: 0.4rem;
     }
 
     .profile-item {
         background: var(--surface-alt);
         border: 1px solid var(--border);
-        border-radius: 16px;
-        padding: 0.95rem 1rem;
+        border-radius: 18px;
+        padding: 1rem 1.1rem;
+        min-height: 88px;
     }
 
     .profile-key {
@@ -395,6 +414,7 @@ st.markdown(
         border-radius: 0 !important;
         color: var(--navy) !important;
         min-width: 2.6rem !important;
+        transition: background 0.18s ease !important;
     }
 
     [data-testid="stNumberInput"] div[data-baseweb="input"] button:hover {
@@ -403,6 +423,12 @@ st.markdown(
 
     [data-baseweb="base-input"] {
         border-radius: 14px !important;
+    }
+
+    [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+        min-height: 2.9rem !important;
+        border-radius: 14px !important;
+        box-shadow: none !important;
     }
 
     [data-testid="stSlider"] [data-baseweb="slider"] > div > div {
@@ -418,17 +444,39 @@ st.markdown(
     [data-testid="stButton"] > button {
         width: 100% !important;
         height: 3.1rem !important;
-        border-radius: 999px !important;
+        border-radius: 16px !important;
         border: none !important;
         background: linear-gradient(135deg, #183b63 0%, #28558a 100%) !important;
         color: #ffffff !important;
         font-weight: 700 !important;
         font-size: 0.95rem !important;
         box-shadow: 0 12px 24px rgba(24, 59, 99, 0.18) !important;
+        transition: transform 0.18s ease, box-shadow 0.18s ease !important;
     }
 
     [data-testid="stButton"] > button:hover {
         background: linear-gradient(135deg, #163657 0%, #234c7a 100%) !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 16px 28px rgba(24, 59, 99, 0.22) !important;
+    }
+
+    [data-testid="stButton"] > button:focus {
+        box-shadow: 0 0 0 4px rgba(24, 59, 99, 0.14) !important;
+    }
+
+    [data-testid="stRadio"] [role="radiogroup"] {
+        gap: 0.6rem !important;
+    }
+
+    [data-testid="stRadio"] label[data-baseweb="radio"] {
+        background: #ffffff !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 14px !important;
+        padding: 0.55rem 0.85rem !important;
+    }
+
+    [data-testid="stRadio"] label[data-baseweb="radio"] > div:last-child {
+        font-weight: 600 !important;
     }
 
     [data-testid="stExpander"] {
@@ -633,22 +681,22 @@ with summary_col:
         <div class="metric-grid">
             <div class="metric-card">
                 <div class="metric-label">Tenure</div>
-                <div class="metric-value">{tenure} months</div>
+                <div class="metric-value">{tenure}<span class="metric-unit">months</span></div>
                 <div class="metric-note">Relationship duration</div>
             </div>
             <div class="metric-card">
                 <div class="metric-label">Satisfaction</div>
-                <div class="metric-value">{satisfaction} / 5</div>
+                <div class="metric-value">{satisfaction}<span class="metric-unit">/ 5</span></div>
                 <div class="metric-note">Experience score</div>
             </div>
             <div class="metric-card">
                 <div class="metric-label">Order Count</div>
-                <div class="metric-value">{order_count}</div>
+                <div class="metric-value">{order_count}<span class="metric-unit">orders</span></div>
                 <div class="metric-note">Historical purchase activity</div>
             </div>
             <div class="metric-card">
                 <div class="metric-label">Last Order</div>
-                <div class="metric-value">{last_order} days</div>
+                <div class="metric-value">{last_order}<span class="metric-unit">days</span></div>
                 <div class="metric-note">Recency of engagement</div>
             </div>
         </div>

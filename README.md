@@ -7,7 +7,7 @@ Churn prediction helps businesses identify customers at risk of leaving. This pr
 
 ## 🛠️ Tech Stack
 - **Languages:** Python
-- **Libraries:** Pandas, Scikit-learn, XGBoost, Streamlit
+- **Libraries:** Pandas, Scikit-learn, XGBoost, Streamlit, LangChain, LangGraph
 - **Model:** Tuned XGBoost Classifier
 - **Deployment Ready:** Configured for local and cloud hosting (Streamlit Cloud, Heroku)
 
@@ -30,7 +30,12 @@ Churn prediction helps businesses identify customers at risk of leaving. This pr
    pip install -r requirements.txt
    ```
 
-4. **Run the application:**
+4. **Set LLM API key (required for retention copilot):**
+   ```bash
+   export GROQ_API_KEY="your_api_key_here"
+   ```
+
+5. **Run the application:**
    ```bash
    streamlit run app.py
    ```
@@ -47,6 +52,23 @@ The pipeline handles:
 1. **Missing Value Imputation:** Median for numeric, most frequent for categorical.
 2. **Feature Engineering:** One-Hot Encoding and dummy variable creation.
 3. **Classification:** XGBoost algorithm optimized for high recall on churners.
+
+## 🤖 LLM Retention Copilot (LangChain + LangGraph + Groq 70B)
+When you click **Generate LLM Retention Plan**, the app now:
+1. Uses churn probability + profile data as structured context.
+2. Runs a guarded LLM step (Groq `llama3-70b-8192`) to explain churn/stability factors.
+3. Keeps chat memory so follow-up prompts remember model context and conversation.
+4. Returns:
+   - Why this user may churn (or stay)
+   - How to reduce churn / strengthen loyalty
+   - Reward suggestions
+   - A draft email for outreach
+
+### Guardrails
+- Uses only provided profile and model score
+- Avoids certainty claims and harmful targeting
+- Refuses non-churn tasks and redirects to churn-retention scope
+- Produces structured, auditable output
 
 ## 📄 License
 MIT License
